@@ -21,14 +21,36 @@ custom:
       staging: ${env.staging.DATABASE_URL}
       dev: ${env.dev.DATABASE_URL}
       prod: ${env.prod.DATABASE_URL}
+    jwtSecret:
+      staging: ${env.staging.JWT_SECRET}
+      dev: ${env.dev.JWT_SECRET}
+      prod: ${env.prod.JWT_SECRET}
+    minioEndpoint:
+      staging: ${env.staging.MINIO_ENDPOINT}
+      dev: ${env.dev.MINIO_ENDPOINT}
+      prod: ${env.prod.MINIO_ENDPOINT}
+    minioAccessKey:
+      staging: ${env.staging.MINIO_ACCESS_KEY}
+      dev: ${env.dev.MINIO_ACCESS_KEY}
+      prod: ${env.prod.MINIO_ACCESS_KEY}
+    minioSecretKey:
+      staging: ${env.staging.MINIO_SECRET_KEY}
+      dev: ${env.dev.MINIO_SECRET_KEY}
+      prod: ${env.prod.MINIO_SECRET_KEY}
 
 provider:
   name: aws
   region: us-east-1
   runtime: nodejs22.x
+  timeout: 10
   architecture: arm64
   environment:
     DATABASE_URL: ${env:DATABASE_URL}
+    JWT_SECRET: ${env:JWT_SECRET}
+    MINIO_ENDPOINT: ${env:MINIO_ENDPOINT}
+    MINIO_ACCESS_KEY: ${env:MINIO_ACCESS_KEY}
+    MINIO_SECRET_KEY: ${env:MINIO_SECRET_KEY}
+    BUCKET_NAME: nutrivi
 
 package:
   individually: true
@@ -43,12 +65,37 @@ functions:
     handler: src/functions/signin.handler
     events:
       - httpApi:
-          path: /signin
           method: post
+          path: /signin
 
   signup:
     handler: src/functions/signup.handler
     events:
       - httpApi:
-          path: /signup
           method: post
+          path: /signup
+  createMeal:
+    handler: src/functions/createMeal.handler
+    events:
+      - httpApi:
+          method: post
+          path: /meals
+  me:
+    handler: src/functions/me.handler
+    events:
+      - httpApi:
+          method: get
+          path: /me
+          
+  listMeals:
+    handler: src/functions/listMeals.handler
+    events:
+      - httpApi:
+          method: get
+          path: /meals
+  getMealById:
+    handler: src/functions/getMealById.handler
+    events:
+      - httpApi:
+          method: get
+          path: /meals/{mealId}

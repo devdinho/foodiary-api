@@ -5,6 +5,7 @@ import { HttpRequest, HttpResponse } from '../types/Http';
 import { badRequest, conflict, created } from '../utils/http';
 import { z } from 'zod';
 import { hash } from 'bcryptjs';
+import { calculateGoals } from '../lib/calculateGoals';
 
 const schema = z.object({
     goal: z.enum(['lose', 'maintain', 'gain']),
@@ -40,6 +41,18 @@ export class SignUpController {
         }
 
         const { account, ...userData } = data;
+
+        const goals = calculateGoals({
+            activityLevel: data.activityLevel,
+            birthDate: new Date(data.birthDate),
+            gender: data.gender,
+            goal: data.goal,
+            height: data.height,
+            weight: data.weight,
+        })
+
+        console.log('info', 'Calculated goals:', goals);
+
         const hashedPassword = await hash(account.password, 10);
 
         const [user] = await db
@@ -47,11 +60,8 @@ export class SignUpController {
         .values({
             ...userData,
             ...account,
+            ...goals,
             password: hashedPassword,
-            calories: 0,
-            proteins: 0,
-            carbohydrates: 0,
-            fats: 0,
         }).returning({
             id: usersTable.id,
         });

@@ -5,7 +5,7 @@ import { HttpRequest, HttpResponse } from '../types/Http';
 import { badRequest, ok, unauthorized } from '../utils/http';
 import { z } from 'zod';
 import { compare } from 'bcryptjs';
-
+import { signAccessTokenFor } from '../lib/jwt';
 
 const schema = z.object({
     email: z.email(),
@@ -23,6 +23,7 @@ export class SignInController {
         const user = await db.query.usersTable.findFirst({
             columns:{
                 id: true,
+                name: true,
                 email: true,
                 password: true,
             },
@@ -33,8 +34,10 @@ export class SignInController {
             return unauthorized({ error: "Invalid credentials." });
         }
 
+        const accessToken = signAccessTokenFor(user.id);
+
         return ok({
-            user
+            accessToken,
         });
     }
 }
