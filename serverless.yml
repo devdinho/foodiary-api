@@ -1,0 +1,54 @@
+org: a6ntech
+
+service: foodiary-api
+
+plugins:
+  - serverless-offline
+  - serverless-scriptable-plugin
+
+custom:
+  scriptHooks:
+    before:deploy:deploy: |
+      echo "🚀 Iniciando deploy para o stage: $SLS_STAGE"
+      if [ "$SLS_STAGE" = "dev" ]; then
+        echo "❌ Deploy para 'dev' está bloqueado."
+        exit 1
+      fi
+
+  stage_variables:
+    databaseUrl:
+      staging: ${env.staging.DATABASE_URL}
+      dev: ${env.dev.DATABASE_URL}
+      prod: ${env.prod.DATABASE_URL}
+
+provider:
+  name: aws
+  region: us-east-1
+  runtime: nodejs22.x
+  architecture: arm64
+  stage: staging
+  environment:
+    DATABASE_URL: ${self:custom.stage_variables.databaseUrl.${sls:stage}}
+
+package:
+  individually: true
+
+build:
+  esbuild:
+    minify: true
+    sourcemap: false
+
+functions:
+  signin:
+    handler: src/functions/signin.handler
+    events:
+      - httpApi:
+          path: /signin
+          method: post
+
+  signup:
+    handler: src/functions/signup.handler
+    events:
+      - httpApi:
+          path: /signup
+          method: post
