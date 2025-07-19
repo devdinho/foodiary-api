@@ -3,6 +3,7 @@ org: a6ntech
 service: foodiary-api
 
 plugins:
+  - serverless-dotenv-plugin
   - serverless-offline
   - serverless-scriptable-plugin
 
@@ -26,9 +27,8 @@ provider:
   region: us-east-1
   runtime: nodejs22.x
   architecture: arm64
-  stage: staging
   environment:
-    DATABASE_URL: ${self:custom.stage_variables.databaseUrl.${sls:stage}}
+    DATABASE_URL: ${env:DATABASE_URL}
 
 package:
   individually: true
