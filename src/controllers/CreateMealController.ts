@@ -18,6 +18,10 @@ export class CreateMealController {
             return badRequest({ erros: error.issues });
         }
 
+        const stage = process.env.STAGE;
+
+        console.log("Stage atual:", stage);
+
         const fileId = randomUUID();
         const ext = data.fileType === 'audio/m4a' ? '.m4a' : '.jpeg';
         const fileKey = `input_files/${userId}/${fileId}${ext}`;

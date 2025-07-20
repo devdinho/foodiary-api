@@ -8,7 +8,7 @@
     "migrate:dev": "SLS_STAGE=dev drizzle-kit push",
     "migrate:staging": "SLS_STAGE=staging drizzle-kit push",
     "migrate:prod": "SLS_STAGE=prod drizzle-kit push",
-    "offline": "SLS_STAGE=staging sls offline"
+    "offline": "SLS_STAGE=dev sls offline"
   },
   "devDependencies": {
     "@types/aws-lambda": "^8.10.152",
@@ -23,6 +23,7 @@
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.848.0",
+    "@aws-sdk/client-sqs": "^3.848.0",
     "@aws-sdk/s3-request-presigner": "^3.848.0",
     "@neondatabase/serverless": "^1.0.1",
     "aws-sdk": "^2.1692.0",

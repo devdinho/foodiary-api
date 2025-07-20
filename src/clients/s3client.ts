@@ -8,4 +8,4 @@ export const s3Client = new AWS.S3({
   signatureVersion: 'v4',
 });
 
-export const bucketUrl = `https://${process.env.MINIO_ENDPOINT}/${process.env.MINIO_BUCKET_NAME}`;
+export const bucketUrl = `https://${process.env.MINIO_ENDPOINT}/${process.env.BUCKET_NAME}`;

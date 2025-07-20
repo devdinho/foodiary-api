@@ -8,14 +8,7 @@ plugins:
   - serverless-scriptable-plugin
 
 custom:
-  scriptHooks:
-    before:deploy:deploy: |
-      echo "🚀 Iniciando deploy para o stage: $SLS_STAGE"
-      if [ "$SLS_STAGE" = "dev" ]; then
-        echo "❌ Deploy para 'dev' está bloqueado."
-        exit 1
-      fi
-
+  stage: ${opt:stage, 'dev'}
   stage_variables:
     databaseUrl:
       staging: ${env.staging.DATABASE_URL}
@@ -37,10 +30,19 @@ custom:
       staging: ${env.staging.MINIO_SECRET_KEY}
       dev: ${env.dev.MINIO_SECRET_KEY}
       prod: ${env.prod.MINIO_SECRET_KEY}
+    awsAccessKey:
+      staging: ${env.staging.CUSTOM_AWS_ACCESS_KEY}
+      dev: ${env.dev.CUSTOM_AWS_ACCESS_KEY}
+      prod: ${env.prod.CUSTOM_AWS_ACCESS_KEY}
+    awsSecretKey:
+      staging: ${env.staging.CUSTOM_AWS_SECRET_KEY}
+      dev: ${env.dev.CUSTOM_AWS_SECRET_KEY}
+      prod: ${env.prod.CUSTOM_AWS_SECRET_KEY}
 
 provider:
   name: aws
   region: us-east-1
+  stage: ${opt:stage, 'dev'}
   runtime: nodejs22.x
   timeout: 10
   architecture: arm64
@@ -50,7 +52,23 @@ provider:
     MINIO_ENDPOINT: ${env:MINIO_ENDPOINT}
     MINIO_ACCESS_KEY: ${env:MINIO_ACCESS_KEY}
     MINIO_SECRET_KEY: ${env:MINIO_SECRET_KEY}
-    BUCKET_NAME: nutrivi
+    CUSTOM_AWS_ACCESS_KEY: ${env:CUSTOM_AWS_ACCESS_KEY}
+    CUSTOM_AWS_SECRET_KEY: ${env:CUSTOM_AWS_SECRET_KEY}
+    STAGE: ${self:provider.stage}
+    BUCKET_NAME: nutrivi-${self:provider.stage}
+    MEALS_QUEUE_URL: https://sqs.us-east-1.amazonaws.com/429982003319/meals-queue-${self:provider.stage}
+
+
+  iam:
+    role:
+      statements:
+        - Effect: Allow
+          Action:
+            - sqs:ReceiveMessage
+            - sqs:DeleteMessage
+            - sqs:GetQueueAttributes
+          Resource:
+            - arn:aws:sqs:us-east-1:429982003319:meals-queue-${self:provider.stage}
 
 package:
   individually: true
@@ -99,3 +117,47 @@ functions:
       - httpApi:
           method: get
           path: /meals/{mealId}
+          
+  fileUploadedEvents:
+    handler: src/functions/fileUploadedEvents.handler
+    events:
+      - httpApi:
+          method: post
+          path: /upload/callback
+          
+  processMeal:
+    handler: src/functions/processMealFile.handler
+    events:
+      - sqs:
+          arn:
+            Fn::GetAtt:
+              - MealsQueue
+              - Arn
+          batchSize: 1
+
+resources:
+  Resources:
+    MealsQueueDLQ:
+      Type: AWS::SQS::Queue
+      Properties:
+        QueueName: meals-queue-dlq-${self:provider.stage}
+
+    MealsQueue:
+      Type: AWS::SQS::Queue
+      Properties:
+        QueueName: meals-queue-${self:provider.stage}
+        VisibilityTimeout: 60
+        RedrivePolicy:
+          maxReceiveCount: 5
+          deadLetterTargetArn: !GetAtt MealsQueueDLQ.Arn
+
+    MealsQueueLambdaPermission:
+      Type: AWS::Lambda::Permission
+      Properties:
+        FunctionName:
+          Fn::GetAtt:
+            - ProcessMealLambdaFunction
+            - Arn
+        Action: lambda:InvokeFunction
+        Principal: sqs.amazonaws.com
+        SourceArn: arn:aws:sqs:us-east-1:429982003319:meals-queue-${self:provider.stage}
